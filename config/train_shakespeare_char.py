@@ -23,7 +23,7 @@ n_layer = 6
 d_n_layer = 3
 n_head = 6
 n_embd = 384
-dropout = 0.2
+dropout = 0
 
 learning_rate = 1e-3 # with baby networks can afford to go a bit higher
 max_iters = 2500
