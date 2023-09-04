@@ -141,7 +141,7 @@ class GPT(nn.Module):
         self.transformer.wte.weight = self.lm_head.weight # https://paperswithcode.com/method/weight-tying
         
         self.discriminator = nn.ModuleDict(dict(
-            wte = nn.Embedding(config.vocab_size, config.n_embd),
+            wte = nn.Linear(config.vocab_size, config.n_embd),
             wpe = nn.Embedding(config.block_size, config.n_embd),
             h = nn.ModuleList([Block(config, causal=False) for _ in range(config.d_n_layer)]),
             ln_f = LayerNorm(config.n_embd, bias=config.bias),
@@ -196,19 +196,22 @@ class GPT(nn.Module):
             # if we are given some desired targets also calculate the loss
             logits = self.lm_head(x)
 
-            # Discriminator
-            y = self.discriminator.wte(idx) + self.discriminator.wpe(pos)
-            for block in self.discriminator.h:
-                y = block(y)
-            y = self.discriminator.ln_f(y)
-            y = self.discriminator.d_head(y).squeeze(dim=-1)
-            weights = F.softmax(y, dim=-1)
+            if self.training:
+                # Discriminator
+                y = self.discriminator.wte(logits) + self.discriminator.wpe(pos)
+                for block in self.discriminator.h:
+                    y = block(y)
+                y = self.discriminator.ln_f(y)
+                y = self.discriminator.d_head(y).squeeze(dim=-1)
+                weights = F.softmax(y, dim=-1)
 
-            loss = F.cross_entropy(logits.transpose(-1, -2), targets, ignore_index=-1, reduction="none")
-            loss = (loss * weights).sum(dim=-1).mean()
-            
-            # Add penalty term to discourage ignoring tokens
-            loss = loss + torch.log(weights * t).mean()
+                loss = F.cross_entropy(logits.transpose(-1, -2), targets, ignore_index=-1, reduction="none")
+                loss = (loss * weights).sum(dim=-1).mean()
+                
+                # Add penalty term to discourage ignoring tokens
+                loss = loss + torch.log(weights * t).mean()
+            else:
+                loss = F.cross_entropy(logits.transpose(-1, -2), targets, ignore_index=-1, reduction="mean")
         else:
             # inference-time mini-optimization: only forward the lm_head on the very last position
             logits = self.lm_head(x[:, [-1], :]) # note: using list [-1] to preserve the time dim
