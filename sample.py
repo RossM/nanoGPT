@@ -36,6 +36,8 @@ if init_from == 'resume':
     # init from a model saved in a specific directory
     ckpt_path = os.path.join(out_dir, 'ckpt.pt')
     checkpoint = torch.load(ckpt_path, map_location=device)
+    print(f"config = {checkpoint['config']}")
+    print(f"iter_num = {checkpoint['iter_num']}, best_val_loss = {checkpoint['best_val_loss']}")
     gptconf = GPTConfig(**checkpoint['model_args'])
     model = GPT(gptconf)
     state_dict = checkpoint['model']
