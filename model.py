@@ -178,7 +178,7 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, idx, targets=None):
+    def forward(self, idx, targets=None, kl_alpha=0.0, reverse_kl=False):
         device = idx.device
         b, t = idx.size()
         assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
@@ -196,7 +196,7 @@ class GPT(nn.Module):
             # if we are given some desired targets also calculate the loss
             logits = self.lm_head(x)
 
-            if self.training:
+            if kl_alpha:
                 # Discriminator
                 y = self.discriminator.wte(logits) + self.discriminator.wpe(pos)
                 for block in self.discriminator.h:
@@ -206,10 +206,18 @@ class GPT(nn.Module):
                 weights = F.softmax(y, dim=-1)
 
                 loss = F.cross_entropy(logits.transpose(-1, -2), targets, ignore_index=-1, reduction="none")
-                loss = (loss * weights).sum(dim=-1).mean()
+                loss = (weights * loss).sum() / b
                 
-                # Add penalty term to discourage ignoring tokens
-                loss = loss + torch.log(weights * t).mean()
+                # Add penalty term to encourage the discriminator to give nonzero weight to all tokens
+                if not reverse_kl:
+                    # Equivalent to torch.nn.functional.kl_div(weights.log(), uniform, reduction="batchmean")
+                    # where uniform is a uniform distribution, i.e. torch.full_like(weights, 1/t)
+                    kl_loss = -torch.log(weights * t).mean()
+                else:
+                    # Equivalent to torch.nn.functional_kl_div(uniform.log(), weights, reduction="batchmean")
+                    # where uniform is a uniform distribution, i.e. torch.full_like(weights, 1/t)
+                    kl_loss = (weights * torch.log(weights * t)).sum() / b
+                loss = loss - kl_alpha * kl_loss
             else:
                 loss = F.cross_entropy(logits.transpose(-1, -2), targets, ignore_index=-1, reduction="mean")
         else:
