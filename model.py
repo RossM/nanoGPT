@@ -210,14 +210,14 @@ class GPT(nn.Module):
                 
                 # Add penalty term to encourage the discriminator to give nonzero weight to all tokens
                 if not reverse_kl:
-                    # Equivalent to torch.nn.functional.kl_div(weights.log(), uniform, reduction="batchmean")
+                    # Equivalent to -torch.nn.functional.kl_div(weights.log(), uniform, reduction="batchmean")
                     # where uniform is a uniform distribution, i.e. torch.full_like(weights, 1/t)
-                    kl_loss = -torch.log(weights * t).mean()
+                    kl_loss = torch.log(weights * t).mean()
                 else:
-                    # Equivalent to torch.nn.functional_kl_div(uniform.log(), weights, reduction="batchmean")
+                    # Equivalent to -torch.nn.functional_kl_div(uniform.log(), weights, reduction="batchmean")
                     # where uniform is a uniform distribution, i.e. torch.full_like(weights, 1/t)
-                    kl_loss = (weights * torch.log(weights * t)).sum() / b
-                loss = loss - kl_alpha * kl_loss
+                    kl_loss = torch.special.entr(weights).sum() / b - math.log(t)
+                loss = loss + kl_alpha * kl_loss
             else:
                 loss = F.cross_entropy(logits.transpose(-1, -2), targets, ignore_index=-1, reduction="mean")
         else:
