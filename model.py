@@ -167,7 +167,7 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, idx, targets=None, distill_loss_scale=0):
+    def forward(self, idx, targets=None, distill_alpha=0, distill_beta=1):
         device = idx.device
         b, t = idx.size()
         assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
@@ -181,7 +181,7 @@ class GPT(nn.Module):
         x = self.transformer.drop(tok_emb + pos_emb)
         for block in self.transformer.h:
             x_out = block(x)
-            distill_loss = distill_loss + (self.transformer.ln_f(x) - self.transformer.ln_f(x_out).detach()).pow(2).mean()
+            distill_loss = distill_beta * distill_loss + distill_alpha * (self.transformer.ln_f(x) - self.transformer.ln_f(x_out).detach()).pow(2).mean()
             x = x_out
         x = self.transformer.ln_f(x)
 
@@ -191,7 +191,7 @@ class GPT(nn.Module):
             loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
             
             # distillation loss
-            loss = loss + distill_loss_scale * distill_loss
+            loss = loss + distill_loss
         else:
             # inference-time mini-optimization: only forward the lm_head on the very last position
             logits = self.lm_head(x[:, [-1], :]) # note: using list [-1] to preserve the time dim
