@@ -145,7 +145,7 @@ class GPT(nn.Module):
             wpe = nn.Embedding(config.block_size, config.n_embd),
             h = nn.ModuleList([Block(config, causal=False) for _ in range(config.d_n_layer)]),
             ln_f = LayerNorm(config.n_embd, bias=config.bias),
-            d_head = nn.Linear(config.n_embd, 1),
+            d_head = nn.Linear(config.n_embd, 1, bias=False),
         ))
 
         # init all weights
@@ -154,6 +154,7 @@ class GPT(nn.Module):
         for pn, p in self.named_parameters():
             if pn.endswith('c_proj.weight'):
                 torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * config.n_layer))
+        torch.nn.init.zeros_(self.discriminator.d_head.weight)
 
         # report number of parameters
         print("number of parameters: %.2fM" % (self.get_num_params()/1e6,))
@@ -196,7 +197,7 @@ class GPT(nn.Module):
             # if we are given some desired targets also calculate the loss
             logits = self.lm_head(x)
 
-            if kl_alpha:
+            if self.training:
                 # Discriminator
                 y = self.discriminator.wte(logits) + self.discriminator.wpe(pos)
                 for block in self.discriminator.h:
