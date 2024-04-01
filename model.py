@@ -286,7 +286,7 @@ class GPT(nn.Module):
             print(f"using fused AdamW: {use_fused}")
         elif optimizer_type == "powerdescent":
             from scram_pytorch import PowerDescent
-            optimizer = PowerDescent(optim_groups, lr=learning_rate, n=power_n)
+            optimizer = PowerDescent(optim_groups, lr=learning_rate, betas=betas, n=power_n)
         elif optimizer_type == "scram":
             from scram_pytorch import Scram
             optimizer = Scram(optim_groups, lr=learning_rate, betas=betas)
@@ -295,13 +295,13 @@ class GPT(nn.Module):
             optimizer = Simon(optim_groups, lr=learning_rate, betas=betas)
         elif optimizer_type == "simon-r":
             from scram_pytorch import Simon
-            optimizer = Simon(optim_groups, lr=learning_rate, betas=betas, rmsnorm=True)
+            optimizer = Simon(optim_groups, lr=learning_rate, betas=betas, rmsclip=True)
         elif optimizer_type == "simon-l":
             from scram_pytorch import Simon
             optimizer = Simon(optim_groups, lr=learning_rate, betas=betas, layerwise=True)
         elif optimizer_type == "simon-rl":
             from scram_pytorch import Simon
-            optimizer = Simon(optim_groups, lr=learning_rate, betas=betas, rmsnorm=True, layerwise=True)
+            optimizer = Simon(optim_groups, lr=learning_rate, betas=betas, rmsclip=True, layerwise=True)
         elif optimizer_type == "esgd":
             from scram_pytorch import ESGD
             optimizer = ESGD(optim_groups, lr=learning_rate)
