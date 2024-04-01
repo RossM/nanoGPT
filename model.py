@@ -260,7 +260,7 @@ class GPT(nn.Module):
 
         return model
 
-    def configure_optimizers(self, weight_decay, learning_rate, betas, device_type):
+    def configure_optimizers(self, optimizer_type, weight_decay, learning_rate, betas, power_n, device_type):
         # start with all of the candidate parameters
         param_dict = {pn: p for pn, p in self.named_parameters()}
         # filter out those that do not require grad
@@ -280,9 +280,28 @@ class GPT(nn.Module):
         # Create AdamW optimizer and use the fused version if it is available
         fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
         use_fused = fused_available and device_type == 'cuda'
-        extra_args = dict(fused=True) if use_fused else dict()
-        optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=betas, **extra_args)
-        print(f"using fused AdamW: {use_fused}")
+        if optimizer_type == "adamw":
+            extra_args = dict(fused=True) if use_fused else dict()
+            optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=betas, **extra_args)
+            print(f"using fused AdamW: {use_fused}")
+        elif optimizer_type == "powerdescent":
+            from scram_pytorch import PowerDescent
+            optimizer = PowerDescent(optim_groups, lr=learning_rate, n=power_n)
+        elif optimizer_type == "scram":
+            from scram_pytorch import Scram
+            optimizer = Scram(optim_groups, lr=learning_rate, betas=betas)
+        elif optimizer_type == "simon":
+            from scram_pytorch import simon
+            optimizer = Simon(optim_groups, lr=learning_rate, betas=betas)
+        elif optimizer_type == "esgd":
+            from scram_pytorch import ESGD
+            optimizer = ESGD(optim_groups, lr=learning_rate)
+        elif optimizer_type == "esgd-a":
+            from scram_pytorch import ESGD
+            optimizer = ESGD(optim_groups, lr=learning_rate, p=1, swap_ratio=0.9)
+        elif optimizer_type == "lion":
+            from lion_pytorch import Lion
+            optimizer = Lion(optim_groups, lr=learning_rate, betas=betas)
 
         return optimizer
 
