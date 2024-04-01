@@ -293,6 +293,15 @@ class GPT(nn.Module):
         elif optimizer_type == "simon":
             from scram_pytorch import simon
             optimizer = Simon(optim_groups, lr=learning_rate, betas=betas)
+        elif optimizer_type == "simon-r":
+            from scram_pytorch import simon
+            optimizer = Simon(optim_groups, lr=learning_rate, betas=betas, rmsnorm=True)
+        elif optimizer_type == "simon-l":
+            from scram_pytorch import simon
+            optimizer = Simon(optim_groups, lr=learning_rate, betas=betas, layerwise=True)
+        elif optimizer_type == "simon-rl":
+            from scram_pytorch import simon
+            optimizer = Simon(optim_groups, lr=learning_rate, betas=betas, rmsnorm=True, layerwise=True)
         elif optimizer_type == "esgd":
             from scram_pytorch import ESGD
             optimizer = ESGD(optim_groups, lr=learning_rate)

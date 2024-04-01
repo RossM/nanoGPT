@@ -11,7 +11,6 @@ always_save_checkpoint = False
 
 wandb_log = True # override via command line if you like
 wandb_project = 'gpt-scram'
-wandb_run_name = 'mini-gpt'
 
 dataset = 'shakespeare_char'
 gradient_accumulation_steps = 1

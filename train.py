@@ -42,6 +42,7 @@ init_from = 'scratch' # 'scratch' or 'resume' or 'gpt2*'
 # wandb logging
 wandb_log = True # disabled by default
 wandb_project = 'gpt-scram'
+wandb_name = ''
 # data
 dataset = 'openwebtext'
 gradient_accumulation_steps = 5 * 8 # used to simulate larger batch sizes
@@ -247,7 +248,7 @@ def get_lr(it):
 # logging
 if wandb_log and master_process:
     import wandb
-    wandb.init(project=wandb_project, config=config)
+    wandb.init(project=wandb_project, name=wandb_name if wandb_name != '' else None, config=config)
 
 # training loop
 X, Y = get_batch('train') # fetch the very first batch
